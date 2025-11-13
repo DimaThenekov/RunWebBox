@@ -1,12 +1,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
-import { type V86Config } from 'v86';
 
 export interface VMMetadata {
   id: string;
   state: 'creating' | 'running' | 'paused' | 'stopped' | 'error';
   createdAt: string;
   updatedAt?: string;
-  config: V86Config;
   error?: string;
 }
 
