@@ -1,88 +1,63 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
 import useV86 from '../hooks/useV86';
-import { type RootState } from '../store/store';
-
-interface TerminalOutput {
-  vmId: string;
-  content: string[];
-}
+import { useVMTerminal } from '../hooks/useVMTerminal';
 
 const Terminal: React.FC = () => {
   const [activeVmId, setActiveVmId] = useState<string | null>(null);
-  const [terminalOutputs, setTerminalOutputs] = useState<TerminalOutput[]>([]);
   const [inputCommand, setInputCommand] = useState('');
   const terminalEndRef = useRef<HTMLDivElement>(null);
-  const { createVM, destroyVM, getVM } = useV86();
-  const vms = useSelector((state: RootState) => state.vm.vms);
-
-  // Получить вывод для активной VM
-  const getActiveOutput = !activeVmId
-    ? ['$ No VM selected. Create or select a VM to start.']
-    : terminalOutputs.find(output => output.vmId === activeVmId)?.content || [
-        '$ VM terminal ready...',
-      ];
-
-  // Добавить вывод в терминал конкретной VM
-  const addOutput = (vmId: string, message: string) => {
-    setTerminalOutputs(prev => {
-      const existing = prev.find(output => output.vmId === vmId);
-      if (existing) {
-        return prev.map(output =>
-          output.vmId === vmId
-            ? { ...output, content: [...output.content, message] }
-            : output
-        );
-      } else {
-        return [...prev, { vmId, content: [message] }];
-      }
-    });
-  };
+  
+  const { 
+    createVM, 
+    destroyVM, 
+    getAllVMMetadata, 
+    getAllVMIds,
+    sendCommand 
+  } = useV86();
+  
+  const { output, clearOutput } = useVMTerminal(activeVmId);
+  const vms = getAllVMMetadata();
+  const vmIds = getAllVMIds();
 
   // Прокрутка к низу терминала
   useEffect(() => {
     terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [terminalOutputs]);
+  }, [output]);
 
   // Автоматически выбираем первую VM при создании
   useEffect(() => {
-    if (vms.length > 0 && !activeVmId) {
-      setActiveVmId(vms[0].id);
-    } else if (vms.length === 0) {
+    if (vmIds.length > 0 && !activeVmId) {
+      setActiveVmId(vmIds[0]);
+    } else if (vmIds.length === 0) {
       setActiveVmId(null);
     }
-  }, [vms, activeVmId]);
+  }, [vmIds, activeVmId]);
 
   // Обработчик ввода команд
   const handleCommandSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeVmId || !inputCommand.trim()) return;
 
-    // Добавляем команду в вывод
-    addOutput(activeVmId, `$ ${inputCommand}`);
-
-    // Отправляем команду в VM
-    getVM(activeVmId)!.serial0_send(inputCommand + '\n');
+    // Добавляем команду в вывод (это сделает хук useVMTerminal через слушатель)
+    sendCommand(activeVmId, inputCommand);
     setInputCommand('');
   };
 
   // Функция для создания тестовой VM
   const handleCreateTestVM = () => {
     const vmId = `test-vm-${Date.now()}`;
-
-    addOutput(vmId, `$ Creating test VM: ${vmId}`);
     setActiveVmId(vmId);
 
     try {
       const config = {
-        wasm_path: '/v86/v86.wasm',
+        wasm_path: 'https://dimathenekov.github.io/AlpineLinuxBuilder/v86.wasm',
         memory_size: 512 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
-        bios: { url: '/v86/bios/seabios.bin' },
-        vga_bios: { url: '/v86/bios/vgabios.bin' },
+        bios: { url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/seabios.bin' },
+        vga_bios: { url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/vgabios.bin' },
         filesystem: {
-          baseurl: '/v86/image/alpine-rootfs-flat',
-          basefs: '/v86/image/alpine-fs.json',
+          baseurl: 'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-rootfs-flat',
+          basefs: 'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-fs.json',
         },
         net_device: {
           relay_url: 'fetch',
@@ -90,95 +65,28 @@ const Terminal: React.FC = () => {
           router_ip: '192.168.86.1',
           vm_ip: '192.168.86.200',
         },
-        disable_speaker: true,
+        //disable_speaker: true,
         autostart: true,
         bzimage_initrd_from_filesystem: true,
         cmdline:
           'rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci tsc=reliable',
+        initial_state: { url: "https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-state.bin.zst" },
       };
 
       createVM(vmId, config);
-      addOutput(vmId, `✓ VM ${vmId} created successfully`);
-      addOutput(vmId, `$ VM state: creating -> running`);
-      let t = 0;
-      let text = '';
-      getVM(vmId)!.add_listener('serial0-output-byte', (byte: number) => {
-        const char = String.fromCharCode(byte);
-        if (char === '\r') {
-          return;
-        }
-        text += char;
-        if (t) clearTimeout(t);
-        t = setTimeout(() => {
-          addOutput(vmId, text);
-          t = 0;
-          text = '';
-        }, 100);
-      });
     } catch (error) {
-      addOutput(vmId, `✗ Failed to create VM: ${error}`);
+      console.error('Failed to create VM:', error);
     }
   };
 
   // Функция для удаления VM
   const handleDestroyVM = (vmId: string) => {
-    addOutput(vmId, `$ Destroying VM: ${vmId}`);
     destroyVM(vmId);
-
-    // Удаляем вывод терминала
-    setTerminalOutputs(prev => prev.filter(output => output.vmId !== vmId));
-
+    
     // Если удаляем активную VM, выбираем другую
     if (activeVmId === vmId) {
-      const otherVms = vms.filter(vm => vm.id !== vmId);
-      setActiveVmId(otherVms.length > 0 ? otherVms[0].id : null);
-    }
-
-    addOutput(vmId, `✓ VM ${vmId} destroyed`);
-  };
-
-  // Функция для отображения информации о всех VM
-  const displayVMInfo = () => {
-    //const activeOutput = getActiveOutput();
-    const info = [
-      '$ === Virtual Machines Information ===',
-      ...vms.map(
-        vm =>
-          `$ VM: ${vm.id}\n` +
-          `$   State: ${vm.state}\n` +
-          `$   Created: ${new Date(vm.createdAt).toLocaleTimeString()}\n` +
-          `$   Updated: ${vm.updatedAt ? new Date(vm.updatedAt).toLocaleTimeString() : 'N/A'}`
-      ),
-      '$ ===================================',
-    ];
-
-    if (activeVmId) {
-      setTerminalOutputs(prev =>
-        prev.map(output =>
-          output.vmId === activeVmId
-            ? { ...output, content: [...output.content, ...info] }
-            : output
-        )
-      );
-    }
-  };
-
-  // Функция для очистки терминала активной VM
-  const clearTerminal = () => {
-    if (activeVmId) {
-      setTerminalOutputs(prev =>
-        prev.map(output =>
-          output.vmId === activeVmId
-            ? {
-                ...output,
-                content: [
-                  '$ Terminal cleared',
-                  '$ Ready to execute commands...',
-                ],
-              }
-            : output
-        )
-      );
+      const otherVms = vmIds.filter(id => id !== vmId);
+      setActiveVmId(otherVms.length > 0 ? otherVms[0] : null);
     }
   };
 
@@ -212,13 +120,7 @@ const Terminal: React.FC = () => {
             Create Test VM
           </button>
           <button
-            onClick={displayVMInfo}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors"
-          >
-            Show VM Info
-          </button>
-          <button
-            onClick={clearTerminal}
+            onClick={clearOutput}
             className="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-sm transition-colors"
           >
             Clear
@@ -228,7 +130,7 @@ const Terminal: React.FC = () => {
 
       {/* Область вывода терминала */}
       <div className="flex-1 bg-black p-4 font-mono text-sm text-green-400 overflow-auto">
-        {getActiveOutput.map((line, index) => (
+        {output.map((line, index) => (
           <div key={index} className="whitespace-pre-wrap break-words">
             {line}
           </div>
