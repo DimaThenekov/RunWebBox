@@ -76,7 +76,7 @@ export const V86InstanceProvider: React.FC<{ children: React.ReactNode }> = ({ c
     });
 
     // Обновление состояния VM
-    newVM.add_listener('emulator-started', () => {
+    newVM.add_listener('emulator-loaded', () => {
       updateVMMetadata(id, { state: 'running' });
     });
 

@@ -65,7 +65,7 @@ const Terminal: React.FC = () => {
           router_ip: '192.168.86.1',
           vm_ip: '192.168.86.200',
         },
-        //disable_speaker: true,
+        disable_speaker: true,
         autostart: true,
         bzimage_initrd_from_filesystem: true,
         cmdline:
