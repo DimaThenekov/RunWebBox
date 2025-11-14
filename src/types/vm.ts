@@ -1,4 +1,4 @@
-import { type V86Starter } from 'v86';
+import { type V86 } from 'v86';
 
 export interface VMMetadata {
   id: string;
@@ -10,7 +10,7 @@ export interface VMMetadata {
 
 export interface VMInstance {
   id: string;
-  instance: V86Starter;
+  instance: V86;
   metadata: VMMetadata;
   outputListeners: Set<(output: string) => void>;
 }

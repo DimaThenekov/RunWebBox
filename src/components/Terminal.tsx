@@ -6,15 +6,10 @@ const Terminal: React.FC = () => {
   const [activeVmId, setActiveVmId] = useState<string | null>(null);
   const [inputCommand, setInputCommand] = useState('');
   const terminalEndRef = useRef<HTMLDivElement>(null);
-  
-  const { 
-    createVM, 
-    destroyVM, 
-    getAllVMMetadata, 
-    getAllVMIds,
-    sendCommand 
-  } = useV86();
-  
+
+  const { createVM, destroyVM, getAllVMMetadata, getAllVMIds, sendCommand } =
+    useV86();
+
   const { output, clearOutput } = useVMTerminal(activeVmId);
   const vms = getAllVMMetadata();
   const vmIds = getAllVMIds();
@@ -49,15 +44,21 @@ const Terminal: React.FC = () => {
     setActiveVmId(vmId);
 
     try {
-      const config = {
+      createVM(vmId, {
         wasm_path: 'https://dimathenekov.github.io/AlpineLinuxBuilder/v86.wasm',
         memory_size: 512 * 1024 * 1024,
         vga_memory_size: 8 * 1024 * 1024,
-        bios: { url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/seabios.bin' },
-        vga_bios: { url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/vgabios.bin' },
+        bios: {
+          url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/seabios.bin',
+        },
+        vga_bios: {
+          url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/vgabios.bin',
+        },
         filesystem: {
-          baseurl: 'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-rootfs-flat',
-          basefs: 'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-fs.json',
+          baseurl:
+            'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-rootfs-flat',
+          basefs:
+            'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-fs.json',
         },
         net_device: {
           relay_url: 'fetch',
@@ -70,10 +71,10 @@ const Terminal: React.FC = () => {
         bzimage_initrd_from_filesystem: true,
         cmdline:
           'rw root=host9p rootfstype=9p rootflags=trans=virtio,cache=loose modules=virtio_pci tsc=reliable',
-        initial_state: { url: "https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-state.bin.zst" },
-      };
-
-      createVM(vmId, config);
+        initial_state: {
+          url: 'https://dimathenekov.github.io/AlpineLinuxBuilder/alpine-state.bin.zst',
+        },
+      });
     } catch (error) {
       console.error('Failed to create VM:', error);
     }
@@ -82,7 +83,7 @@ const Terminal: React.FC = () => {
   // Функция для удаления VM
   const handleDestroyVM = (vmId: string) => {
     destroyVM(vmId);
-    
+
     // Если удаляем активную VM, выбираем другую
     if (activeVmId === vmId) {
       const otherVms = vmIds.filter(id => id !== vmId);
