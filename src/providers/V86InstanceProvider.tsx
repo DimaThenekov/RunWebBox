@@ -120,12 +120,11 @@ export const V86InstanceProvider: React.FC<{ children: React.ReactNode }> = ({
               let data;
               if (url.endsWith('.zst')) {
                 const responseArray = new Uint8Array(arrayBuffer);
-                const decompressedSize = new DataView(
-                  responseArray.buffer
-                ).getUint32(0, true);
-                const compressedData = responseArray.subarray(4);
                 data = new Uint8Array(
-                  newVM.zstd_decompress(decompressedSize, compressedData)
+                  newVM.zstd_decompress(
+                    +url.match(/-(\d+)./)![1],
+                    responseArray
+                  )
                 );
               } else {
                 data = new Uint8Array(arrayBuffer);

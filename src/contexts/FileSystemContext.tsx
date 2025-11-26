@@ -1,12 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
-
-export interface FileItem {
-  id: string;
-  name: string;
-  type: 'file' | 'folder';
-  content?: string;
-  children?: FileItem[];
-}
+import type { FileItem } from '../types/fileSystem';
 
 export interface FileSystemContextType {
   fileSystem: FileItem | null;

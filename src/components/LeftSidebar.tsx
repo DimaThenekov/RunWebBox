@@ -1,7 +1,7 @@
 // components/LeftSidebar.tsx
 import React from 'react';
 import { useFileSystem } from '../hooks/useFileSystem';
-import type { FileItem } from '../contexts/FileSystemContext';
+import type { FileItem } from '../types/fileSystem';
 
 const LeftSidebar: React.FC = () => {
   const { fileSystem, openFile } = useFileSystem();

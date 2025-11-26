@@ -9,4 +9,9 @@ export default defineConfig({
     exclude: ['v86'],
   },
   base: '/RunWebBox/',
+  server: {
+    headers: {
+      'Service-Worker-Allowed': '/',
+    },
+  },
 });

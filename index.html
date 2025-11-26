@@ -13,6 +13,27 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>RunWebBox</title>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function () {
+          const swPath = location.host.includes('localhost')
+            ? '/RunWebBox/sw.js'
+            : '/sw.js';
+          navigator.serviceWorker
+            .register(swPath, {
+              scope: '/',
+            })
+            .then(
+              function (registration) {
+                console.log('ServiceWorker registration successful');
+              },
+              function (err) {
+                console.log('ServiceWorker registration failed: ', err);
+              }
+            );
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

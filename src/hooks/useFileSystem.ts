@@ -6,7 +6,7 @@ import {
   updateFileContent,
   setActiveTab,
 } from '../store/slices/fileSystemSlice';
-import { type FileItem } from '../store/slices/fileSystemSlice';
+import { type FileItem } from '../types/fileSystem';
 
 export const useFileSystem = () => {
   //console.log(V86);
